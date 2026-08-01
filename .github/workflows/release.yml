@@ -56,10 +56,6 @@ jobs:
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            .
-            macrdp-ui/src-tauri
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -78,10 +74,12 @@ jobs:
         run: |
           set -euo pipefail
           arch -arch ${{ matrix.arch }} cargo build -p macrdp-server --release
+        timeout-minutes: 30
 
       - name: Verify binary
         run: |
           set -euo pipefail
+          chmod +x target/release/macrdp-server
           ls -la target/release/macrdp-server
           file target/release/macrdp-server
           ./target/release/macrdp-server --version || true
@@ -89,9 +87,10 @@ jobs:
       - name: Build UI + DMG
         run: |
           set -euo pipefail
-          arch -arch ${{ matrix.arch }} cd macrdp-ui && npm run tauri -- build
+          arch -arch ${{ matrix.arch }} bash -c "cd macrdp-ui && npm run tauri -- build"
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
+        timeout-minutes: 30
 
       - name: Verify DMG
         run: |

@@ -56,11 +56,13 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ env.MACOSX_DEPLOYMENT_TARGET }}
         run: |
           set -euo pipefail
-          arch -arch arm64 cargo build -p macrdp-server --release
-          
+          arch -arch aarch64 cargo build -p macrdp-server --release
+        timeout-minutes: 30
+
       - name: Verify binary
         run: |
           set -euo pipefail
+          chmod +x target/release/macrdp-server
           ls -la target/release/macrdp-server
           file target/release/macrdp-server
           ./target/release/macrdp-server --version || true
