@@ -8,28 +8,35 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-26-arm64
     
     steps:
       - uses: actions/checkout@v4
       
-      - name: Fix Xcode
+      - name: Verify environment
         run: |
-          sudo rm -rf /Library/Developer/CommandLineTools
-          xcode-select --install 2>/dev/null || true
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          xcrun --show-sdk-path
-          
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin
+          echo "=== System Info ==="
+          sw_vers
+          echo ""
+          echo "=== Rust ==="
+          rustc --version
+          cargo --version
+          echo ""
+          echo "=== Xcode ==="
+          xcode-select -p
+          xcodebuild -version
+          echo ""
+          echo "=== Clang ==="
+          which clang
+          clang --version
           
       - name: Build CLI
+        run: cargo build -p macrdp-server --release
+        
+      - name: Verify binary
         run: |
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-          export MACOSX_DEPLOYMENT_TARGET=13.0
-          cargo build -p macrdp-server --release
+          ls -lh target/release/macrdp-server
+          file target/release/macrdp-server
           
       - name: Upload binary
         uses: actions/upload-artifact@v4
