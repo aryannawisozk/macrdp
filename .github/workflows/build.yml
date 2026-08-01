@@ -8,36 +8,29 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-26-arm64
+    runs-on: macos-latest
     
     steps:
       - uses: actions/checkout@v4
       
-      - name: Verify environment
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+          
+      - name: Find clang
         run: |
-          echo "=== System Info ==="
-          sw_vers
-          echo ""
-          echo "=== Rust ==="
-          rustc --version
-          cargo --version
-          echo ""
-          echo "=== Xcode ==="
-          xcode-select -p
-          xcodebuild -version
-          echo ""
-          echo "=== Clang ==="
-          which clang
+          # Find clang directly without xcodebuild
+          CLANG_PATH=$(which clang)
+          echo "Using clang at: $CLANG_PATH"
           clang --version
           
       - name: Build CLI
+        env:
+          CC: /usr/bin/clang
+          CXX: /usr/bin/clang++
         run: cargo build -p macrdp-server --release
         
-      - name: Verify binary
-        run: |
-          ls -lh target/release/macrdp-server
-          file target/release/macrdp-server
-          
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
