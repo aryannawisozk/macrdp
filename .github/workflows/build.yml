@@ -8,29 +8,44 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos15
     
+    env:
+      SDKROOT: $(xcrun --sdk macosx --show-sdk-path)
+      MACOSX_DEPLOYMENT_TARGET: 13.0
+
     steps:
       - uses: actions/checkout@v4
       
+      - name: Fix Xcode toolchain
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> $GITHUB_ENV
+          xcodebuild -version
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
           
-      - name: Find clang
+      - name: Verify clang
         run: |
-          # Find clang directly without xcodebuild
-          CLANG_PATH=$(which clang)
+          CLANG_PATH=$(xcrun --find clang)
           echo "Using clang at: $CLANG_PATH"
           clang --version
-          
+
       - name: Build CLI
         env:
-          CC: /usr/bin/clang
-          CXX: /usr/bin/clang++
-        run: cargo build -p macrdp-server --release
+          SDKROOT: ${{ env.SDKROOT }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ env.MACOSX_DEPLOYMENT_TARGET }}
+        run: arch -arch arm64 cargo build -p macrdp-server --release
         
+      - name: Verify binary
+        run: |
+          ls -la target/release/macrdp-server
+          file target/release/macrdp-server
+          
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
