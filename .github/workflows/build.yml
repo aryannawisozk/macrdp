@@ -9,7 +9,6 @@ permissions:
 jobs:
   build:
     runs-on: macos15
-    fail-fast: false
     
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +50,7 @@ jobs:
         run: |
           set -euo pipefail
           arch -arch arm64 cargo build -p macrdp-server --release
-
+          
       - name: Verify binary
         run: |
           set -euo pipefail
