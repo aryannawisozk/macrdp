@@ -1,0 +1,28 @@
+name: Build macOS Binary
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+          
+      - name: Build CLI
+        run: cargo build -p macrdp-server --release
+        
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: macrdp-server-arm64
+          path: target/release/macrdp-server
