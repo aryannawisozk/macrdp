@@ -20,19 +20,33 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
 
-    env:
-      SDKROOT: $(xcrun --sdk macosx --show-sdk-path)
-      MACOSX_DEPLOYMENT_TARGET: 13.0
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Fix Xcode toolchain
         run: |
+          set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
           echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> $GITHUB_ENV
           xcodebuild -version
+          echo "Xcode toolchain configured"
+
+      - name: Verify Command Line Tools
+        run: |
+          set -euo pipefail
+          echo "Verifying build tools..."
+          which ar
+          which clang
+          which xcodebuild
+          ar --version
+          clang --version
+          echo "All build tools verified"
+
+      - name: Set SDKROOT and deployment target
+        run: |
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -50,7 +64,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: macrdp-ui/package-lock.json
 
@@ -61,20 +75,27 @@ jobs:
         env:
           SDKROOT: ${{ env.SDKROOT }}
           MACOSX_DEPLOYMENT_TARGET: ${{ env.MACOSX_DEPLOYMENT_TARGET }}
-        run: arch -arch ${{ matrix.arch }} cargo build -p macrdp-server --release
+        run: |
+          set -euo pipefail
+          arch -arch ${{ matrix.arch }} cargo build -p macrdp-server --release
 
       - name: Verify binary
         run: |
+          set -euo pipefail
           ls -la target/release/macrdp-server
           file target/release/macrdp-server
+          ./target/release/macrdp-server --version || true
 
       - name: Build UI + DMG
-        run: arch -arch ${{ matrix.arch }} cd macrdp-ui && npm run tauri -- build
+        run: |
+          set -euo pipefail
+          arch -arch ${{ matrix.arch }} cd macrdp-ui && npm run tauri -- build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
 
       - name: Verify DMG
         run: |
+          set -euo pipefail
           ls -la macrdp-ui/src-tauri/target/release/bundle/dmg/*.dmg
 
       - name: Upload DMG
@@ -99,6 +120,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Verify artifacts
+        run: |
+          set -euo pipefail
+          ls -la artifacts/macrdp-aarch64/*.dmg
+          ls -la artifacts/macrdp-server-aarch64/macrdp-server
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
